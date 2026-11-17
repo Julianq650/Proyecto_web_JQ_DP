@@ -1,0 +1,21 @@
+{% extends 'modulo/base.html' %}
+{% block titulo %}Usuarios y roles{% endblock %}
+{% block contenido %}
+<div class="migas"><a href="{% url 'panel' %}">Administración</a> / <b>Usuarios y roles</b></div>
+<div class="encabezado"><div><h1>Usuarios y roles</h1><p class="sub">Asigna o retira el rol de recepcionista. Los clientes se registran solos desde la página.</p></div></div>
+<div class="dos-col" style="margin-top:0">
+<div class="panel"><table class="tabla">
+    <tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Reservas</th><th></th></tr>
+    {% for x in usuarios %}
+    <tr><td><b>{{ x.u.username }}</b></td><td>{{ x.u.get_full_name|default:'—' }}</td><td><span class="etq {% if x.rol == 'Administrador' %}en_uso{% elif x.rol == 'Recepcionista' %}reservada{% else %}finalizada{% endif %}">{{ x.rol }}</span></td><td>{{ x.u.n_reservas }}</td>
+        <td>{% if x.rol != 'Administrador' %}<form method="post">{% csrf_token %}<input type="hidden" name="usuario" value="{{ x.u.id }}"><button class="btn-claro">{% if x.rol == 'Recepcionista' %}Quitar recepcionista{% else %}Hacer recepcionista{% endif %}</button></form>{% endif %}</td></tr>
+    {% endfor %}
+</table></div>
+<aside class="panel"><h3>Qué puede hacer cada rol</h3>
+    <b>Recepcionista</b>
+    <ul class="permisos"><li>Ver la agenda del día de todas las canchas</li><li>Crear reservas presenciales y telefónicas</li><li>Registrar llegadas, cobros y finalizar turnos</li><li>Cancelar reservas del día que no se han pagado</li><li>Reportar daños (deja la cancha fuera de servicio)</li><li>Ver la caja del día</li></ul>
+    <br><b>Administrador</b>, además:
+    <ul class="permisos"><li>Ver ingresos y ocupación históricos</li><li>Cambiar precios y datos de las canchas</li><li>Resolver daños y volver a habilitar canchas</li><li>Cancelar reservas ya pagadas (con devolución)</li><li>Moderar reseñas</li><li>Asignar o quitar recepcionistas</li></ul>
+</aside>
+</div>
+{% endblock %}

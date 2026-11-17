@@ -1,0 +1,44 @@
+{% extends 'modulo/base.html' %}{% load canchas_extras %}
+{% block titulo %}Mapa de canchas{% endblock %}
+{% block contenido %}
+<div class="encabezado">
+    <div><h1>Mapa de las instalaciones</h1><p class="sub">Estado actual de cada cancha. Toca una para ver sus reservas.</p></div>
+    <div class="leyenda">
+        <span class="chip"><span class="punto uso"></span>En uso <b>{{ conteo.uso }}</b></span>
+        <span class="chip"><span class="punto reservada"></span>Reservada <b>{{ conteo.reservada }}</b></span>
+        <span class="chip"><span class="punto libre"></span>Disponible <b>{{ conteo.libre }}</b></span>
+        <span class="chip"><span class="punto fuera"></span>Fuera de servicio <b>{{ conteo.fuera }}</b></span>
+    </div>
+</div>
+<div class="cuerpo-mapa">
+    <div class="mapa"><div id="plano" aria-label="Mapa del complejo deportivo"></div>
+        <div class="simbolos">
+            <span><i class="sw" style="background:#e9d9ae"></i>Senderos peatonales</span>
+            <span><i class="sw" style="background:#fff;border:2px solid #39463d"></i>Edificios</span>
+            <span><i class="sw" style="border:2px dashed #6c7a63"></i>Zonas con malla</span>
+            <span><i class="sw" style="background:#c9cdc5"></i>Vía vehicular</span>
+        </div>
+    </div>
+    <aside class="panel lista"><h2>Canchas</h2>
+        {% for zona, canchas in zonas %}
+            <div class="grupo">{{ zona }}</div>
+            {% for x in canchas %}
+            <details>
+                <summary><span class="punto {{ x.estado }}"></span><div><b>{{ x.obj.nombre }}</b><small class="t-{{ x.estado }}">{{ x.texto }}</small></div><span class="ab">▾</span></summary>
+                <div class="det">
+                    <dl class="mini-datos">
+                        <div><dt>Precio / hora</dt><dd>desde {{ x.obj.precio_dia|pesos }}</dd></div>
+                        <div><dt>Capacidad</dt><dd>{{ x.obj.capacidad }} personas</dd></div>
+                        <div><dt>Superficie</dt><dd>{{ x.obj.superficie }}</dd></div>
+                        <div><dt>Turno libre</dt><dd>{% if x.estado == 'fuera' %}—{% else %}{{ x.proximo }}{% endif %}</dd></div>
+                    </dl>
+                    <a class="btn" href="{% url 'detalle' x.obj.id %}">Ver cancha y reservar →</a>
+                </div>
+            </details>
+            {% endfor %}
+        {% endfor %}
+    </aside>
+</div>
+{{ datos_mapa|json_script:"datos-mapa" }}
+{% endblock %}
+{% block scripts %}<script>dibujarMapa(document.getElementById('plano'), JSON.parse(document.getElementById('datos-mapa').textContent));</script>{% endblock %}

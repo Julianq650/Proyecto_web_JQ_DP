@@ -1,0 +1,12 @@
+{% extends 'modulo/base.html' %}
+{% block titulo %}Reportar daño{% endblock %}
+{% block contenido %}
+<div class="migas"><a href="{% url 'agenda' %}">Recepción</a> / <b>Reportar daño</b></div>
+<div class="panel" style="max-width:640px">
+<h1>Reportar una cancha dañada</h1><p class="sub">La cancha quedará fuera de servicio (en rojo en el mapa) hasta que el administrador revise y resuelva la novedad.</p>
+<form method="post" class="formulario" style="margin-top:16px">{% csrf_token %}
+    <label>Cancha {{ form.cancha }}{{ form.cancha.errors }}</label>
+    <label>¿Qué pasó? {{ form.descripcion }}{{ form.descripcion.errors }}</label>
+    <button class="btn-mostaza" type="submit">Reportar y marcar fuera de servicio</button>
+</form></div>
+{% endblock %}

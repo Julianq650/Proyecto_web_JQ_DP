@@ -1,0 +1,59 @@
+{% extends 'modulo/base.html' %}{% load canchas_extras %}
+{% block titulo %}Recepción{% endblock %}
+{% block contenido %}
+<div class="encabezado">
+    <div><h1>Recepción · agenda de hoy</h1><p class="sub">{% now "l j \d\e F" %} · {{ pendientes }} reserva{{ pendientes|pluralize }} con pago pendiente</p></div>
+    <div class="acciones"><a class="btn" href="{% url 'nueva_reserva' %}">+ Reserva presencial</a><a class="btn-peligro" href="{% url 'reportar_incidencia' %}" style="text-decoration:none">Reportar daño</a></div>
+</div>
+
+<div class="panel agenda">
+<table>
+    <tr><th></th>{% for h in horas %}<th {% if h.hour == hora_actual %}class="ahora"{% endif %}>{{ h|hora12|cut:":00" }}</th>{% endfor %}</tr>
+    {% for f in filas %}
+    <tr><td class="nom"><span class="punto {{ f.estado.estado }}"></span> {{ f.cancha.nombre }}</td>
+        {% for r in f.celdas %}
+        {% if r %}<td class="celda {{ r.estado }} {% if forloop.counter0|add:6 == hora_actual %}col-ahora{% endif %}" title="{{ r.nombre_cliente }} · {{ r.codigo }}"><span>{% if r.pagado %}$✓{% else %}{{ r.nombre_cliente|slice:":1" }}{% endif %}</span></td>
+        {% elif f.cancha.fuera_de_servicio %}<td class="celda fuera"></td>
+        {% else %}<td class="celda {% if forloop.counter0|add:6 == hora_actual %}col-ahora{% endif %}"><a href="{% url 'nueva_reserva' %}?cancha={{ f.cancha.id }}&hora={{ forloop.counter0|add:6|stringformat:'02d' }}:00" title="Reservar">+</a></td>{% endif %}
+        {% endfor %}
+    </tr>
+    {% endfor %}
+</table>
+<div class="simbolos"><span><i class="sw reservada"></i>Reservada</span><span><i class="sw uso"></i>En uso</span><span><i class="sw" style="background:#c9cdd1"></i>Finalizada</span><span><b>$✓</b> Pagada</span><span><b>+</b> Turno libre: clic para reservar</span></div>
+</div>
+
+<div class="dos-col">
+    <div class="panel"><h3>Reservas de hoy</h3>
+    <table class="tabla">
+        <tr><th>Hora</th><th>Cancha</th><th>Cliente</th><th>Estado</th><th>Pago</th><th>Acciones</th></tr>
+        {% for r in reservas %}
+        <tr>
+            <td><b>{{ r.hora_inicio|hora12 }}</b></td><td>{{ r.cancha.nombre }}</td>
+            <td>{{ r.nombre_cliente }}<br><span class="ayuda">{{ r.telefono }} · {{ r.codigo }}</span></td>
+            <td><span class="etq {{ r.estado }}">{{ r.get_estado_display }}</span></td>
+            <td>{% if r.pagado %}<span class="etq si">{{ r.valor|pesos }} · {{ r.get_medio_pago_display }}</span>{% else %}<span class="etq no">{{ r.valor|pesos }} pendiente</span>{% endif %}</td>
+            <td><div class="acciones">
+                {% if r.estado == 'reservada' %}<form method="post" action="{% url 'accion_reserva' r.id 'llegada' %}">{% csrf_token %}<button class="btn-claro">Llegó</button></form>{% endif %}
+                {% if not r.pagado and r.estado != 'finalizada' %}<form method="post" action="{% url 'accion_reserva' r.id 'pago' %}">{% csrf_token %}
+                    <select name="medio_pago" aria-label="Medio de pago">{% for v, n in medios %}<option value="{{ v }}" {% if v == r.medio_pago %}selected{% endif %}>{{ n }}</option>{% endfor %}</select>
+                    <button class="btn">Cobrar</button></form>{% endif %}
+                {% if r.estado == 'en_uso' %}<form method="post" action="{% url 'accion_reserva' r.id 'finalizar' %}">{% csrf_token %}<button class="btn-claro">Finalizar</button></form>{% endif %}
+                {% if r.estado == 'reservada' and not r.pagado %}<form method="post" action="{% url 'accion_reserva' r.id 'cancelar' %}">{% csrf_token %}<button class="btn-peligro">Cancelar</button></form>{% endif %}
+            </div></td>
+        </tr>
+        {% empty %}<tr><td colspan="6" class="ayuda">No hay reservas para hoy.</td></tr>{% endfor %}
+    </table></div>
+
+    <aside>
+        <div class="panel"><h3>Caja de hoy</h3>
+            <div class="caja-total">{{ total_caja|pesos }}</div>
+            <table class="precios">{% for c in caja %}<tr><td>{{ c.medio }} ({{ c.n }})</td><td>{{ c.total|pesos }}</td></tr>{% empty %}<tr><td>Sin pagos registrados hoy</td><td></td></tr>{% endfor %}</table>
+        </div>
+        <div class="panel"><h3>Canchas fuera de servicio</h3>
+            {% for i in incidencias %}<div class="resena"><div class="q"><b>{{ i.cancha.nombre }}</b><span>{{ i.reportada_en|timesince }}</span></div>{{ i.descripcion }}</div>
+            {% empty %}<p class="ayuda">Todas las canchas están habilitadas.</p>{% endfor %}
+            <p class="ayuda">Solo el administrador puede volver a habilitar una cancha.</p>
+        </div>
+    </aside>
+</div>
+{% endblock %}

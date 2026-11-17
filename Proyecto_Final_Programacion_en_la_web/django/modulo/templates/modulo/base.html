@@ -1,0 +1,40 @@
+{% load static %}<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block titulo %}Mapa de canchas{% endblock %} · Multi-Dust</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'modulo/css/base.css' %}">
+</head>
+<body>
+    {% with url=request.resolver_match.url_name %}
+    <header class="barra"><div class="barra-in">
+        <a class="marca" href="{% url 'mapa' %}"><i></i>Multi-Dust</a>
+        <nav aria-label="Principal">
+            <a href="{% url 'mapa' %}" {% if url == 'mapa' or url == 'detalle' %}class="on"{% endif %}>Mapa de canchas</a>
+            {% if user.is_authenticated %}<a href="{% url 'mis_reservas' %}" {% if url == 'mis_reservas' %}class="on"{% endif %}>Mis reservas</a>{% endif %}
+            {% if puede_recepcion %}<a href="{% url 'agenda' %}" {% if url == 'agenda' or url == 'nueva_reserva' or url == 'reportar_incidencia' %}class="on"{% endif %}>Recepción</a>{% endif %}
+            {% if es_admin %}<a href="{% url 'panel' %}" {% if url == 'panel' or url == 'usuarios' %}class="on"{% endif %}>Administración</a>
+            <a href="{% url 'monitor' %}" {% if url == 'monitor' %}class="on"{% endif %}>Monitor de logs</a>{% endif %}
+        </nav>
+        <div class="cuenta">
+            {% if user.is_authenticated %}
+                <span>{{ user.get_full_name|default:user.username }}</span><span class="rol">{{ rol_usuario|capfirst }}</span>
+                <form method="post" action="{% url 'salir' %}">{% csrf_token %}<button type="submit">Salir</button></form>
+            {% else %}
+                <a class="btn-borde" href="{% url 'login' %}">Ingresar</a><a class="btn-borde" href="{% url 'registro' %}">Crear cuenta</a>
+            {% endif %}
+        </div>
+    </div></header>
+    {% endwith %}
+    <main>
+        {% if messages %}<ul class="avisos">{% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>{% endif %}
+        {% block contenido %}{% endblock %}
+    </main>
+    <footer>Multi-Dust · Sistema de reservas. Cada visita y cada acción quedan registradas en los logs que se analizan en Kibana.</footer>
+    <script src="{% static 'modulo/js/canchas.js' %}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

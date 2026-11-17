@@ -1,0 +1,182 @@
+{% extends 'modulo/base.html' %}
+{% block titulo %}Monitor de logs{% endblock %}
+{% block contenido %}
+<style>
+.mon-cab { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 18px; }
+.vivo { display: inline-flex; align-items: center; gap: 10px; background: #fff; border: 1px solid var(--linea); border-radius: 999px; padding: 7px 8px 7px 14px; font-size: 14px; }
+.vivo .latido { width: 10px; height: 10px; border-radius: 50%; background: var(--uso); box-shadow: 0 0 0 0 rgba(47,158,91,.6); animation: latido 1.8s infinite; }
+.vivo.pausa .latido { background: var(--libre); animation: none; }
+.vivo.caido .latido { background: var(--fuera); animation: none; }
+@keyframes latido { 70% { box-shadow: 0 0 0 9px rgba(47,158,91,0); } 100% { box-shadow: 0 0 0 0 rgba(47,158,91,0); } }
+.vivo button { border: 0; background: var(--verde); color: #fff; border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 600; }
+
+.flujo { display: grid; grid-template-columns: repeat(7, auto); align-items: center; justify-content: start; gap: 10px; background: var(--verde); color: #fff; border-radius: 16px; padding: 16px 20px; margin-bottom: 18px; overflow-x: auto; }
+.nodo { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); border-radius: 12px; padding: 9px 14px; min-width: 150px; }
+.nodo small { display: block; opacity: .7; font-size: 12px; } .nodo b { font-size: 15px; }
+.nodo.es { background: var(--mostaza); color: #3d2f08; border-color: transparent; }
+.flecha { opacity: .6; font-size: 20px; }
+
+.kpis5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 18px; }
+.kpi .det { font-size: 12.5px; color: var(--gris); }
+.kpi.rojo b { color: #a8362d; } .kpi.ambar b { color: #8a5a00; }
+
+.graficos { display: grid; grid-template-columns: 1.7fr 1fr; gap: 18px; margin-bottom: 18px; align-items: start; }
+.barras-tiempo svg { width: 100%; height: 260px; display: block; }
+.ley { display: flex; gap: 14px; font-size: 12.5px; color: var(--gris); margin-top: 6px; }
+.ley i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.hbar { display: grid; grid-template-columns: 110px 1fr 46px; gap: 10px; align-items: center; font-size: 13.5px; margin: 7px 0; }
+.hbar .pista { height: 10px; background: #eef0ec; border-radius: 99px; overflow: hidden; } .hbar .pista span { display: block; height: 100%; border-radius: 99px; }
+.hbar b { text-align: right; }
+
+.feed-cab { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.feed-cab input, .feed-cab select { font: inherit; font-size: 14px; padding: 8px 10px; border: 1px solid #c3c6be; border-radius: 8px; background: #fff; }
+.feed-cab input { flex: 1; min-width: 220px; }
+.consola { background: #13261b; border-radius: 14px; padding: 6px; max-height: 620px; overflow-y: auto; }
+.msg { display: grid; grid-template-columns: 78px 84px 1fr; gap: 12px; align-items: start; padding: 10px 12px; border-radius: 10px; color: #e8efe9; font-size: 14px; }
+.msg + .msg { border-top: 1px solid rgba(255,255,255,.06); }
+.msg.nuevo { animation: entrar 1.6s ease-out; }
+@keyframes entrar { from { background: rgba(217,163,33,.28); } to { background: transparent; } }
+.msg time { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 13px; color: #9fb5a6; padding-top: 2px; }
+.nivel { display: inline-block; text-align: center; border-radius: 6px; padding: 2px 0; font-size: 11.5px; font-weight: 800; letter-spacing: .04em; width: 76px; }
+.nivel.INFO { background: rgba(47,158,91,.22); color: #7fdba3; } .nivel.WARNING { background: rgba(217,163,33,.22); color: #f2c95c; }
+.nivel.ERROR { background: rgba(200,71,61,.28); color: #ff9c92; }
+.msg .texto { font-weight: 600; }
+.msg .texto.peticion { font-weight: 400; color: #b9cabe; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 13px; }
+.etqs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.etqs span { background: rgba(255,255,255,.08); border-radius: 6px; padding: 2px 8px; font-size: 12px; color: #c9d8cd; }
+.etqs span b { color: #fff; font-weight: 600; }
+.etqs .r-administrador { background: rgba(217,163,33,.2); } .etqs .r-recepcionista { background: rgba(59,111,212,.3); }
+.vacio, .falla { padding: 30px; text-align: center; color: #9fb5a6; }
+.falla { color: #ff9c92; }
+.pie-mon { font-size: 12.5px; color: var(--gris); margin-top: 10px; }
+@media (max-width: 1000px) { .kpis5 { grid-template-columns: 1fr 1fr; } .graficos { grid-template-columns: 1fr; } }
+</style>
+
+<div class="mon-cab">
+    <div><h1>Monitor de logs</h1><p class="sub">Mensajes que Fluent Bit entrega a Elasticsearch, consultados en vivo. Última hora.</p></div>
+    <div class="vivo" id="vivo"><span class="latido"></span><span id="estado-vivo">Conectando…</span><button id="pausar" type="button">Pausar</button></div>
+</div>
+
+<div class="flujo" aria-label="Recorrido de los logs">
+    <div class="nodo"><small>Fuente 1 · no estructurado</small><b>nginx</b> · <span id="n-web">–</span> peticiones</div>
+    <span class="flecha">→</span>
+    <div class="nodo"><small>Fuente 2 · JSON</small><b>Django</b> · <span id="n-app">–</span> logs</div>
+    <span class="flecha">→</span>
+    <div class="nodo"><small>Recolecta y parsea</small><b>Fluent Bit</b></div>
+    <span class="flecha">→</span>
+    <div class="nodo es"><small>Almacena e indexa</small><b>Elasticsearch</b></div>
+</div>
+
+<div class="kpis5">
+    <div class="kpi"><small>Logs de la aplicación</small><b id="k-total">–</b><div class="det">última hora</div></div>
+    <div class="kpi"><small>Eventos del negocio</small><b id="k-eventos">–</b><div class="det">reservas, pagos, daños…</div></div>
+    <div class="kpi"><small>Cobrado en recepción</small><b id="k-cobrado">–</b><div class="det" id="k-cobros">–</div></div>
+    <div class="kpi ambar"><small>Ingresos fallidos</small><b id="k-fallidos">–</b><div class="det">intentos de inicio de sesión</div></div>
+    <div class="kpi rojo"><small>Errores</small><b id="k-errores">–</b><div class="det">nivel ERROR</div></div>
+</div>
+
+<div class="graficos">
+    <div class="panel barras-tiempo"><h3>Logs por intervalo de 2 minutos</h3><div id="g-tiempo"></div>
+        <div class="ley"><span><i style="background:#9fc9ad"></i>Informativos</span><span><i style="background:#d9a321"></i>Avisos</span><span><i style="background:#c8473d"></i>Errores</span></div></div>
+    <div>
+        <div class="panel"><h3>Logs por rol</h3><div id="g-rol"></div></div>
+        <div class="panel"><h3>Códigos de respuesta (nginx)</h3><div id="g-codigos"></div></div>
+    </div>
+</div>
+
+<div class="panel">
+    <div class="feed-cab">
+        <h3 style="margin:0 8px 0 0">Mensajes recientes</h3>
+        <input id="f-q" type="search" placeholder="Buscar en los mensajes: pago, Pádel, RES-…" aria-label="Buscar">
+        <select id="f-level" aria-label="Nivel"><option value="">Todos los niveles</option><option>INFO</option><option>WARNING</option><option>ERROR</option></select>
+        <select id="f-tipo" aria-label="Tipo"><option value="">Eventos y peticiones</option><option value="evento" selected>Solo eventos del negocio</option><option value="peticion">Solo peticiones</option></select>
+        <select id="f-rol" aria-label="Rol"><option value="">Todos los roles</option><option value="administrador">Administrador</option><option value="recepcionista">Recepcionista</option><option value="cliente">Cliente</option><option value="visitante">Visitante</option></select>
+    </div>
+    <div class="consola" id="consola"><div class="vacio">Cargando mensajes…</div></div>
+    <p class="pie-mon">Fuente: índice <b>app-logs-*</b> en {{ es_url }}. Se actualiza cada 5 segundos. Para análisis más detallado, usa Kibana en el puerto 5601.</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const pesos = n => '$' + Number(n || 0).toLocaleString('es-CO');
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  let pausado = false, vistos = new Set(), primera = true;
+
+  function barrasTiempo(datos) {
+    const W = 760, H = 260, pad = 22, n = datos.length || 1, bw = (W - pad) / n;
+    const max = Math.max(1, ...datos.map(d => d.total));
+    let s = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Logs por intervalo">`;
+    for (let i = 0; i <= 3; i++) { const y = 8 + (H - 30) * i / 3; s += `<line x1="${pad}" x2="${W}" y1="${y}" y2="${y}" stroke="#e7ebe6"/>`; }
+    s += `<text x="0" y="14" font-size="11" fill="#62666b">${max}</text>`;
+    datos.forEach((d, i) => {
+      const x = pad + i * bw + 2, w = Math.max(2, bw - 4), esc_ = (H - 30) / max;
+      const hi = (d.total - d.avisos - d.errores) * esc_, ha = d.avisos * esc_, he = d.errores * esc_;
+      let y = H - 22;
+      s += `<rect x="${x}" y="${y - hi}" width="${w}" height="${hi}" rx="2" fill="#9fc9ad"><title>${d.hora}: ${d.total} logs</title></rect>`; y -= hi;
+      s += `<rect x="${x}" y="${y - ha}" width="${w}" height="${ha}" fill="#d9a321"/>`; y -= ha;
+      s += `<rect x="${x}" y="${y - he}" width="${w}" height="${he}" fill="#c8473d"/>`;
+      if (i % 5 === 0 && i < n - 3) s += `<text x="${x}" y="${H - 6}" font-size="11" fill="#62666b">${d.hora.slice(0,5)}</text>`;
+    });
+    return s + '</svg>';
+  }
+
+  function hbarras(lista, clave, colores) {
+    if (!lista.length) return '<p class="ayuda">Sin datos todavía.</p>';
+    const max = Math.max(...lista.map(x => x.n));
+    return lista.map(x => `<div class="hbar"><span>${esc(x[clave])}</span><div class="pista"><span style="width:${x.n / max * 100}%;background:${colores(x[clave])}"></span></div><b>${x.n}</b></div>`).join('');
+  }
+  const colorRol = r => ({administrador: '#d9a321', recepcionista: '#3b6fd4', cliente: '#2f9e5b'}[r] || '#9aa1a8');
+  const colorCodigo = c => c >= 500 ? '#c8473d' : c >= 400 ? '#d9a321' : c >= 300 ? '#3b6fd4' : '#2f9e5b';
+
+  function mensaje(m) {
+    const clave = m['@timestamp'] + m.message + (m.path || '') + (m.user_id || '');
+    const nuevo = !primera && !vistos.has(clave); vistos.add(clave);
+    const e = [];
+    if (m.rol) e.push(`<span class="r-${esc(m.rol)}">rol <b>${esc(m.rol)}</b></span>`);
+    if (m.user_id) e.push(`<span>usuario <b>${esc(m.user_id)}</b></span>`);
+    if (m.cancha) e.push(`<span>cancha <b>${esc(m.cancha)}</b></span>`);
+    if (m.reserva) e.push(`<span>reserva <b>${esc(m.reserva)}</b></span>`);
+    if (m.valor) e.push(`<span>valor <b>${pesos(m.valor)}</b></span>`);
+    if (m.medio_pago) e.push(`<span>pago <b>${esc(m.medio_pago)}</b></span>`);
+    if (m.response_time_ms !== undefined) e.push(`<span>${m.response_time_ms} ms</span>`);
+    if (m.ip) e.push(`<span>ip ${esc(m.ip)}</span>`);
+    return `<div class="msg ${nuevo ? 'nuevo' : ''}"><time>${esc(m.hora)}</time><span class="nivel ${esc(m.level)}">${esc(m.level || '—')}</span>
+      <div><div class="texto ${m.tipo === 'peticion' ? 'peticion' : ''}">${esc(m.message)}</div><div class="etqs">${e.join('')}</div></div></div>`;
+  }
+
+  async function cargar() {
+    if (pausado) return;
+    const p = new URLSearchParams({q: $('f-q').value, level: $('f-level').value, tipo: $('f-tipo').value, rol: $('f-rol').value});
+    try {
+      const r = await fetch('{% url "monitor_datos" %}?' + p);
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error);
+      $('vivo').className = 'vivo'; $('estado-vivo').textContent = 'En vivo · ' + d.actualizado;
+      $('k-total').textContent = d.kpis.total.toLocaleString('es-CO'); $('n-app').textContent = d.kpis.total.toLocaleString('es-CO');
+      $('n-web').textContent = d.kpis.web.toLocaleString('es-CO');
+      $('k-eventos').textContent = d.kpis.eventos; $('k-errores').textContent = d.kpis.errores; $('k-fallidos').textContent = d.kpis.fallidos;
+      $('k-cobrado').textContent = pesos(d.kpis.cobrado); $('k-cobros').textContent = d.kpis.cobros + ' pago' + (d.kpis.cobros === 1 ? '' : 's') + ' registrado' + (d.kpis.cobros === 1 ? '' : 's');
+      $('g-tiempo').innerHTML = barrasTiempo(d.minutos);
+      $('g-rol').innerHTML = hbarras(d.por_rol, 'rol', colorRol);
+      $('g-codigos').innerHTML = hbarras(d.codigos, 'code', colorCodigo);
+      $('consola').innerHTML = d.mensajes.length ? d.mensajes.map(mensaje).join('') : '<div class="vacio">No hay mensajes con esos filtros en la última hora.</div>';
+      primera = false;
+    } catch (err) {
+      $('vivo').className = 'vivo caido'; $('estado-vivo').textContent = 'Sin conexión con Elasticsearch';
+      $('consola').innerHTML = `<div class="falla">${esc(err.message)}<br>Revisa que el contenedor de Elasticsearch esté corriendo.</div>`;
+    }
+  }
+
+  $('pausar').addEventListener('click', () => {
+    pausado = !pausado; $('pausar').textContent = pausado ? 'Reanudar' : 'Pausar';
+    $('vivo').classList.toggle('pausa', pausado); $('estado-vivo').textContent = pausado ? 'En pausa' : 'Reanudando…';
+    if (!pausado) cargar();
+  });
+  let espera; ['f-q','f-level','f-tipo','f-rol'].forEach(id => $(id).addEventListener('input', () => { clearTimeout(espera); vistos = new Set(); primera = true; espera = setTimeout(cargar, 300); }));
+  cargar(); setInterval(cargar, 5000);
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,31 @@
+{
+  "index_patterns": ["app-logs-*"],
+  "template": {
+    "settings": { "number_of_shards": 1, "number_of_replicas": 0 },
+    "mappings": {
+      "properties": {
+        "@timestamp":       { "type": "date" },
+        "level":            { "type": "keyword" },
+        "service":          { "type": "keyword" },
+        "logger":           { "type": "keyword" },
+        "message":          { "type": "text", "fields": { "raw": { "type": "keyword", "ignore_above": 256 } } },
+        "tipo":             { "type": "keyword" },
+        "method":           { "type": "keyword" },
+        "path":             { "type": "keyword" },
+        "status":           { "type": "integer" },
+        "response_time_ms": { "type": "float" },
+        "user_id":          { "type": "keyword" },
+        "rol":              { "type": "keyword" },
+        "ip":               { "type": "ip" },
+        "cancha":           { "type": "keyword" },
+        "reserva":          { "type": "keyword" },
+        "valor":            { "type": "integer" },
+        "medio_pago":       { "type": "keyword" },
+        "error":            { "type": "text" },
+        "log":              { "type": "text" },
+        "container_name":   { "type": "keyword" },
+        "entorno":          { "type": "keyword" }
+      }
+    }
+  }
+}

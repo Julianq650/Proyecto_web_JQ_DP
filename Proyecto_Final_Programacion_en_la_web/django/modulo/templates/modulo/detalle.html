@@ -1,0 +1,95 @@
+{% extends 'modulo/base.html' %}{% load canchas_extras %}
+{% block titulo %}{{ cancha.nombre }}{% endblock %}
+{% block contenido %}
+<div class="migas"><a href="{% url 'mapa' %}">Mapa de canchas</a> / {{ cancha.get_zona_display }} / <b>{{ cancha.nombre }}</b></div>
+<div class="encabezado"><h1>{{ cancha.nombre }}</h1>
+    <div class="otras"><a class="chip" href="{% url 'mapa' %}">← Volver al mapa</a>{% for o in otras %}<a class="chip" href="{% url 'detalle' o.id %}">{{ o.nombre }}</a>{% endfor %}</div></div>
+
+<div class="rejilla">
+    <section class="panel">
+        <div class="cancha-grande" id="cancha"></div>
+        <div class="estado-actual">
+            <span class="pill {{ e.estado }}"><span class="punto {{ e.estado }}"></span>{% if e.estado == 'uso' %}En uso{% elif e.estado == 'reservada' %}Reservada{% elif e.estado == 'fuera' %}Fuera de servicio{% else %}Disponible{% endif %}</span>
+            {% if e.estado == 'uso' %}<span class="fin">Termina a las <b>{{ reserva.hora_fin|hora12 }}</b> · faltan {{ progreso.faltan }} min</span>
+            {% elif e.estado == 'reservada' %}<span class="fin">Reservada para las <b>{{ reserva.hora_inicio|hora12 }}</b></span>
+            {% elif e.estado == 'fuera' %}<span class="fin">Temporalmente no disponible para reservas</span>
+            {% else %}<span class="fin">Libre ahora · próximo turno <b>{{ proximo }}</b></span>{% endif %}
+        </div>
+        {% if progreso %}<div class="barra-tiempo"><span style="width: {{ progreso.pct }}%"></span></div>
+        <div class="tiempos"><span>Inició {{ reserva.hora_inicio|hora12 }}</span><span>Termina {{ reserva.hora_fin|hora12 }}</span></div>{% endif %}
+
+        {% if reserva %}
+        <h2 class="sec">{% if e.estado == 'uso' %}Reserva actual{% else %}Próxima reserva{% endif %}</h2>
+        <div class="datos3">
+            <div class="dato"><small>Reservado por</small><b>{% if ve_todo %}{{ reserva.nombre_cliente }}{% else %}{{ reserva.nombre_publico }}{% endif %}</b></div>
+            <div class="dato"><small>Horario</small><b>{{ reserva.hora_inicio|hora12 }} – {{ reserva.hora_fin|hora12 }}</b></div>
+            <div class="dato"><small>Jugadores</small><b>{{ reserva.jugadores }}</b></div>
+            {% if ve_todo %}
+            <div class="dato"><small>Valor</small><b>{{ reserva.valor|pesos }} · {{ reserva.get_medio_pago_display }}</b></div>
+            <div class="dato"><small>Estado del pago</small><b class="{% if reserva.pagado %}t-uso{% else %}t-fuera{% endif %}">{% if reserva.pagado %}Pagado ✓{% else %}Pendiente{% endif %}</b></div>
+            <div class="dato"><small>Código</small><b>{{ reserva.codigo }}</b></div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <h2 class="sec">Más reservas</h2>
+        <div class="dias">{% for d in dias %}<a class="dia {% if d.fecha == fecha %}on{% endif %}" href="?fecha={{ d.fecha|date:'Y-m-d' }}">{{ d.nombre }}</a>{% endfor %}</div>
+        <div class="turnos">
+            {% for t in turnos %}
+            <div class="turno {% if t.pasado %}pasado{% endif %}">
+                <span class="h">{{ t.hora|hora12 }} – {{ t.fin|hora12 }}</span>
+                {% if t.reserva %}
+                    <span class="q"><span class="punto {% if t.reserva.estado == 'en_uso' %}uso{% elif t.reserva.estado == 'finalizada' %}libre{% else %}reservada{% endif %}"></span><b>{{ t.reserva.get_estado_display }}</b> · {% if puede_recepcion or t.reserva.cliente_id == user.id %}{{ t.reserva.nombre_cliente }}{% else %}{{ t.reserva.nombre_publico }}{% endif %} · {{ t.reserva.jugadores }} jugadores</span>
+                    {% if puede_recepcion %}<a class="btn-claro" href="{% url 'agenda' %}">Ver en recepción</a>{% else %}<span></span>{% endif %}
+                {% elif t.pasado %}
+                    <span class="q"><span class="punto libre"></span>Turno terminado</span><span></span>
+                {% elif cancha.fuera_de_servicio %}
+                    <span class="q"><span class="punto fuera"></span>No disponible</span><span></span>
+                {% else %}
+                    <span class="q"><span class="punto libre"></span><b>Disponible</b> · {{ t.precio|pesos }}</span>
+                    <a class="btn" href="{% url 'reservar' cancha.id %}?fecha={{ fecha|date:'Y-m-d' }}&hora={{ t.hora|time:'H:i' }}">Reservar</a>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <aside>
+        <div class="panel"><h3>Datos de la cancha</h3>
+            <div class="ficha">
+                <div><small>Tipo</small><b>{{ cancha.get_deporte_display }}</b></div><div><small>Superficie</small><b>{{ cancha.superficie }}</b></div>
+                <div><small>Dimensiones</small><b>{{ cancha.dimensiones }}</b></div><div><small>Capacidad</small><b>{{ cancha.capacidad }} personas</b></div>
+                <div><small>Iluminación</small><b>{{ cancha.iluminacion }}</b></div><div><small>Ubicación</small><b>{{ cancha.get_zona_display }}</b></div>
+            </div>
+        </div>
+        <div class="panel"><h3>Precio por hora</h3>
+            <table class="precios">
+                <tr><td>Lunes a viernes, 6 a. m. – 6 p. m.</td><td>{{ cancha.precio_dia|pesos }}</td></tr>
+                <tr><td>Lunes a viernes, 6 p. m. – 11 p. m.</td><td>{{ cancha.precio_noche|pesos }}</td></tr>
+                <tr><td>Sábados y domingos</td><td>{{ cancha.precio_finde|pesos }}</td></tr>
+            </table>
+            <div class="pagos"><span class="pago">Efectivo</span><span class="pago">Nequi</span><span class="pago">Daviplata</span><span class="pago">Tarjeta débito / crédito</span><span class="pago">PSE</span></div>
+            {% if cancha.incluye %}<p class="ayuda">Incluye: {{ cancha.incluye }}. El pago se confirma en recepción.</p>{% endif %}
+        </div>
+        <div class="panel"><h3>Próximas actividades</h3>
+            {% for a in actividades %}
+            <div class="act"><div class="fecha-c"><b>{{ a.fecha|date:'j' }}</b><small>{{ a.fecha|date:'M' }}</small></div><div><b>{{ a.titulo }}</b><span>{{ a.detalle }}</span></div></div>
+            {% empty %}<p class="ayuda">No hay actividades programadas.</p>{% endfor %}
+        </div>
+        <div class="panel"><h3>Reseñas</h3>
+            {% if resumen.total %}<div class="nota-r"><b>{{ resumen.promedio|floatformat:1 }}</b><span class="estrellas">{{ resumen.promedio|estrellas }}</span><span class="ayuda">{{ resumen.total }} opiniones</span></div>{% endif %}
+            {% for r in resenas %}
+            <div class="resena"><div class="q"><b>{{ r.usuario.get_full_name|default:r.usuario.username }}</b><span>{{ r.creada_en|timesince }}</span></div><span class="estrellas">{{ r.calificacion|estrellas }}</span><br>{{ r.comentario }}</div>
+            {% empty %}<p class="ayuda">Todavía no hay reseñas.</p>{% endfor %}
+            {% if user.is_authenticated %}
+            <form method="post" action="{% url 'opinar' cancha.id %}" class="formulario" style="margin-top:10px">{% csrf_token %}
+                <label>Tu calificación {{ form_resena.calificacion }}</label>
+                <label>Comentario {{ form_resena.comentario }}</label>
+                <button class="btn" type="submit">Publicar reseña</button>
+            </form>
+            {% endif %}
+        </div>
+    </aside>
+</div>
+{% endblock %}
+{% block scripts %}<script>document.getElementById('cancha').innerHTML = cancha('{{ cancha.deporte }}', '{{ e.estado }}');</script>{% endblock %}

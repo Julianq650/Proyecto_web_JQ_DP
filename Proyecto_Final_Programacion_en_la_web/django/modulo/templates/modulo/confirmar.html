@@ -1,0 +1,27 @@
+{% extends 'modulo/base.html' %}{% load canchas_extras %}
+{% block titulo %}Confirmar reserva{% endblock %}
+{% block contenido %}
+<div class="migas"><a href="{% url 'mapa' %}">Mapa de canchas</a> / <a href="{% url 'detalle' cancha.id %}">{{ cancha.nombre }}</a> / <b>Confirmar reserva</b></div>
+<div class="rejilla">
+<section class="panel">
+    <h1>Confirma tu reserva</h1>
+    <p class="sub">{{ cancha.nombre }} · {{ fecha|date:'l j \d\e F' }} · {{ hora|hora12 }}</p>
+    <form method="post" class="formulario" style="margin-top:18px">{% csrf_token %}
+        <input type="hidden" name="fecha" value="{{ fecha|date:'Y-m-d' }}"><input type="hidden" name="hora" value="{{ hora|time:'H:i' }}">
+        <label>Número de jugadores <span class="ayuda">Máximo {{ cancha.capacidad }}</span>{{ form.jugadores }}{{ form.jugadores.errors }}</label>
+        <label>Teléfono de contacto {{ form.telefono }}{{ form.telefono.errors }}</label>
+        <label>Medio de pago {{ form.medio_pago }}</label>
+        <p class="ayuda">El pago se registra en recepción antes de empezar el turno. Puedes cancelar sin costo hasta 2 horas antes.</p>
+        <button class="btn-mostaza" type="submit">Confirmar reserva · {{ valor|pesos }}</button>
+    </form>
+</section>
+<aside class="panel"><h3>Resumen</h3>
+    <div class="cancha-grande" id="cancha"></div>
+    <table class="precios" style="margin-top:12px">
+        <tr><td>Cancha</td><td>{{ cancha.nombre }}</td></tr><tr><td>Fecha</td><td>{{ fecha|date:'j M Y' }}</td></tr>
+        <tr><td>Horario</td><td>{{ hora|hora12 }} (1 hora)</td></tr><tr><td>Valor</td><td>{{ valor|pesos }}</td></tr>
+    </table>
+</aside>
+</div>
+{% endblock %}
+{% block scripts %}<script>document.getElementById('cancha').innerHTML = cancha('{{ cancha.deporte }}', 'reservada');</script>{% endblock %}

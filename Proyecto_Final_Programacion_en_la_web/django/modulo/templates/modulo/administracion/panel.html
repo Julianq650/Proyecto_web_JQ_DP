@@ -1,0 +1,48 @@
+{% extends 'modulo/base.html' %}{% load canchas_extras %}
+{% block titulo %}Administración{% endblock %}
+{% block contenido %}
+<div class="encabezado"><div><h1>Panel de administración</h1><p class="sub">Resultados del negocio, configuración de canchas y novedades.</p></div>
+<div class="acciones"><a class="btn" href="{% url 'monitor' %}">Monitor de logs</a><a class="btn" href="{% url 'usuarios' %}">Usuarios y roles</a><a class="btn-claro" href="/admin/">Administración avanzada (Django)</a></div></div>
+
+<div class="kpis">
+    <div class="kpi"><small>Ingresos de hoy</small><b>{{ ingresos.hoy|pesos }}</b></div>
+    <div class="kpi"><small>Últimos 7 días</small><b>{{ ingresos.semana|pesos }}</b></div>
+    <div class="kpi"><small>Últimos 30 días</small><b>{{ ingresos.mes|pesos }}</b></div>
+    <div class="kpi"><small>Reservas en 30 días</small><b>{{ total_reservas }}</b><span class="ayuda"> · {{ por_estado.cancelada|default:0 }} canceladas</span></div>
+</div>
+
+<div class="panel"><h3>Canchas: ocupación, ingresos y precios (últimos 30 días)</h3>
+<table class="tabla">
+    <tr><th>Cancha</th><th>Horas reservadas</th><th>Ocupación</th><th>Ingresos</th><th></th><th>Precios: día / noche / fin de semana</th></tr>
+    {% for f in filas %}
+    <tr><td><b>{{ f.c.nombre }}</b>{% if f.c.fuera_de_servicio %} <span class="etq no">Fuera de servicio</span>{% endif %}</td><td>{{ f.horas }}</td><td>{{ f.ocupacion }} %</td>
+        <td>{{ f.ingresos|pesos }}</td><td><div class="barrita"><span style="width: {{ f.barra }}%"></span></div></td>
+        <td><form method="post" action="{% url 'guardar_precios' f.c.id %}" class="precios-form">{% csrf_token %}{{ f.form.precio_dia }}{{ f.form.precio_noche }}{{ f.form.precio_finde }}<button class="btn-claro">Guardar</button></form></td></tr>
+    {% endfor %}
+</table></div>
+
+<div class="dos-col">
+    <div>
+        <div class="panel"><h3>Novedades reportadas por recepción</h3>
+        <table class="tabla"><tr><th>Cancha</th><th>Descripción</th><th>Reportó</th><th>Estado</th></tr>
+        {% for i in incidencias %}
+        <tr><td><b>{{ i.cancha.nombre }}</b></td><td>{{ i.descripcion }}</td><td>{{ i.reportada_por.username|default:'—' }}<br><span class="ayuda">{{ i.reportada_en|date:'j M, g:i a' }}</span></td>
+            <td>{% if i.resuelta %}<span class="etq si">Resuelta</span>{% else %}<form method="post" action="{% url 'resolver_incidencia' i.id %}">{% csrf_token %}<button class="btn">Resolver y habilitar</button></form>{% endif %}</td></tr>
+        {% empty %}<tr><td colspan="4" class="ayuda">No hay novedades.</td></tr>{% endfor %}
+        </table></div>
+        <div class="panel"><h3>Reservas pagadas que se pueden cancelar (requieren devolución)</h3>
+        <table class="tabla"><tr><th>Código</th><th>Cancha</th><th>Fecha</th><th>Cliente</th><th>Valor</th><th></th></tr>
+        {% for r in pagadas_canceladas %}
+        <tr><td>{{ r.codigo }}</td><td>{{ r.cancha.nombre }}</td><td>{{ r.fecha|date:'j M' }} · {{ r.hora_inicio|hora12 }}</td><td>{{ r.nombre_cliente }}</td><td>{{ r.valor|pesos }}</td>
+            <td><form method="post" action="{% url 'cancelar_pagada' r.id %}">{% csrf_token %}<button class="btn-peligro">Cancelar y devolver</button></form></td></tr>
+        {% empty %}<tr><td colspan="6" class="ayuda">No hay reservas pagadas pendientes.</td></tr>{% endfor %}
+        </table></div>
+    </div>
+    <aside class="panel"><h3>Reseñas recientes</h3>
+        {% for r in resenas %}
+        <div class="resena"><div class="q"><b>{{ r.cancha.nombre }}</b><span class="estrellas">{{ r.calificacion|estrellas }}</span></div>{{ r.comentario }}
+            <form method="post" action="{% url 'ocultar_resena' r.id %}" style="margin-top:6px">{% csrf_token %}<button class="btn-claro">{% if r.visible %}Ocultar{% else %}Mostrar{% endif %}</button></form></div>
+        {% empty %}<p class="ayuda">Sin reseñas.</p>{% endfor %}
+    </aside>
+</div>
+{% endblock %}

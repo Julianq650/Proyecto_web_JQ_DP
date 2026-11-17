@@ -1,0 +1,14 @@
+{% extends 'modulo/base.html' %}
+{% block titulo %}Ingresar{% endblock %}
+{% block contenido %}
+<div class="panel" style="max-width:460px;margin:20px auto">
+<h1>Ingresar</h1><p class="sub">Clientes, recepcionistas y administradores ingresan por aquí.</p>
+<form method="post" class="formulario" style="margin-top:16px" novalidate>{% csrf_token %}
+    <label>Usuario<input type="text" name="usuario" value="{{ form.usuario.value|default:'' }}" required autocomplete="username"></label>
+    <label>Contraseña<input type="password" name="clave" required autocomplete="current-password"></label>
+    {% if error %}<p class="errorlist">{{ error }}</p>{% endif %}
+    <button class="btn" type="submit">Ingresar</button>
+</form>
+<p class="ayuda" style="margin-top:14px">¿No tienes cuenta? <a href="{% url 'registro' %}">Crea una aquí</a>.</p>
+</div>
+{% endblock %}

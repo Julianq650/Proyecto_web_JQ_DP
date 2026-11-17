@@ -1,0 +1,12 @@
+{% extends 'modulo/base.html' %}
+{% block titulo %}Reserva presencial{% endblock %}
+{% block contenido %}
+<div class="migas"><a href="{% url 'agenda' %}">Recepción</a> / <b>Reserva presencial</b></div>
+<div class="panel" style="max-width:640px">
+<h1>Nueva reserva presencial</h1><p class="sub">Para clientes que llegan al complejo o reservan por teléfono. El precio se calcula según la cancha y el horario.</p>
+<form method="post" class="formulario" style="margin-top:16px">{% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for campo in form %}{% if campo.name == 'pagado' %}<label class="check">{{ campo }} {{ campo.label }}</label>{% else %}<label>{{ campo.label }}{{ campo }}{{ campo.errors }}</label>{% endif %}{% endfor %}
+    <button class="btn-mostaza" type="submit">Crear reserva</button>
+</form></div>
+{% endblock %}

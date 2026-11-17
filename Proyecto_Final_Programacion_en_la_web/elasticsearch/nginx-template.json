@@ -1,0 +1,22 @@
+{
+  "index_patterns": ["nginx-logs-*"],
+  "template": {
+    "settings": { "number_of_shards": 1, "number_of_replicas": 0 },
+    "mappings": {
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "remote":     { "type": "ip" },
+        "user":       { "type": "keyword" },
+        "method":     { "type": "keyword" },
+        "path":       { "type": "keyword" },
+        "code":       { "type": "integer" },
+        "size":       { "type": "long" },
+        "referer":    { "type": "keyword" },
+        "agent":      { "type": "text", "fields": { "raw": { "type": "keyword", "ignore_above": 256 } } },
+        "log":        { "type": "text" },
+        "container_name": { "type": "keyword" },
+        "entorno":    { "type": "keyword" }
+      }
+    }
+  }
+}

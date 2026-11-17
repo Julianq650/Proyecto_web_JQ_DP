@@ -1,0 +1,9 @@
+{% extends 'modulo/base.html' %}
+{% block titulo %}Acceso restringido{% endblock %}
+{% block contenido %}
+<div class="panel" style="max-width:560px;margin:30px auto;text-align:center">
+<h1>Acceso restringido</h1>
+<p class="sub">Tu rol no tiene permiso para ver esta sección. Si crees que es un error, habla con el administrador.</p>
+<p style="margin-top:18px"><a class="btn" href="{% url 'mapa' %}">Volver al mapa</a></p>
+</div>
+{% endblock %}
